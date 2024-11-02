@@ -1,0 +1,6 @@
+---
+- name: Perform backups Mysql and transfer to QNAP
+  hosts: mysql_machine
+  gather_facts: false
+  roles:
+    - mysql_backup-with-direct-access-to-db

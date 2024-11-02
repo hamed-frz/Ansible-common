@@ -1,0 +1,30 @@
+---
+
+- name: Create backup directory if not exists
+  file:
+    path: "{{ backup_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Backup pfSense configurations
+  loop: "{{ pfsense_instances }}"
+  vars:
+    pfsense_name: "{{ item.pfsense_name }}"
+    pfsense_host: "{{ item.pfsense_host }}"
+    pfsense_user: "{{ item.pfsense_user }}"
+    pfsense_password: "{{ item.pfsense_password }}"
+    pfsense_port: "{{item.pfsense_port}}"
+  shell: |
+      curl -L -k --cookie-jar cookies.txt https://{{ pfsense_host }}:{{pfsense_port}} | grep "name='__csrf_magic'" | sed 's/.*value="\(.*\)".*/\1/' > /tmp/csrf.txt
+      curl -L -k --cookie cookies.txt --cookie-jar cookies.txt --data-urlencode "login=Login" --data-urlencode "usernamefld={{ pfsense_user }}" --data-urlencode "passwordfld={{ pfsense_password }}" --data-urlencode "__csrf_magic=$(cat /tmp/csrf.txt)" https://{{ pfsense_host }}:{{pfsense_port}}/ > /dev/null
+      curl -L -k --cookie cookies.txt --cookie-jar cookies.txt https://{{ pfsense_host }}:{{pfsense_port}}/diag_backup.php  | grep "name='__csrf_magic'"  | sed 's/.*value="\(.*\)".*/\1/' > /tmp/csrf.txt
+      curl -L -k --cookie cookies.txt --cookie-jar cookies.txt --data-urlencode "download=download" --data-urlencode "donotbackuprrd=yes" --data-urlencode "__csrf_magic=$(head -n 1 /tmp/csrf.txt)" https://{{ pfsense_host }}:{{pfsense_port}}/diag_backup.php > {{ backup_dir }}/{{ backup_file_name }}-{{pfsense_name}}-{{pfsense_host}}-{{ansible_date_time}}.xml
+
+# - name: Transfer pfSense backup to QNAP via SSH
+#   shell: |
+#     rsync -avz -e "ssh -p {{ qnap_ssh_port }}"  {{ backup_dir }}/{{ backup_file_name }}-{{pfsense_name}}-{{pfsense_host}}-{{ansible_date_time}}.xml   {{ qnap_user }}@{{ qnap_host }}:{{ qnap_backup_dir }}/{{ backup_file_name }}_{{ ansible_date_time }}.xml
+#   ignore_errors: yes
+
+- name: Report pfSense backup success
+  debug:
+    msg: "pfSense configuration backup and transfer to QNAP completed successfully."

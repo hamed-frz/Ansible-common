@@ -1,0 +1,59 @@
+- name: Install MySQL client (if not installed)
+  ansible.builtin.yum:
+    name: mysql-client
+    state: present
+  when: ansible_facts['os_family'] == "RedHat"
+
+
+- name: Install MySQL client (for Debian-based)
+  ansible.builtin.apt:
+    name: mysql-client
+    state: present
+  when: ansible_facts['os_family'] == "Debian"
+
+
+- name: Create a backup directory (on ansible host)
+  ansible.builtin.file:
+    path: /home/user/backup/mysql
+    state: directory
+    mode: '0755'
+
+
+- name: Backup MySQL database to a SQL file
+  community.mysql.mysql_db:
+    login_host: "{{ mysql_host }}"
+    login_user: "{{ mysql_user }}"
+    login_password: "{{ mysql_password }}"
+    state: dump
+    name: all
+    target: "/home/user/backup/mysql_backup.sql"
+
+
+- name: Compress the backups
+  ansible.builtin.archive:
+    path: "/home/user/backup/mysql_backup.sql"
+    dest: "/home/user/backup/mysql_backup.sql.tar.gz"
+    format: gz
+
+
+- name: Transfer backup to QNAP via SSH
+  shell: |
+    rsync -avz -e "ssh -p {{ qnap_ssh_port }}"  /home/user/backup/mysql_backup.sql.tar.gz  {{ qnap_user }}@{{ qnap_host }}:{{ qnap_backup_dir }}/mysql_backup.sql.tar.gz
+  #ignore_errors: yes
+
+
+- name: Clean up old backups on ansible host
+  ansible.builtin.find:
+    paths: /home/user/backup/
+    age: 1d
+    recurse: yes
+  register: old_backups
+
+
+- name: Remove old backups
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ old_backups.files }}"
+
+

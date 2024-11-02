@@ -1,0 +1,6 @@
+---
+- name: Perform backups Pfsense and transfer to QNAP
+  hosts: localhost
+  gather_facts: false
+  roles:
+    - pfsense_backup-by-webui

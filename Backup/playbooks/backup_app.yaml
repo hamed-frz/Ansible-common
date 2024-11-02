@@ -1,0 +1,6 @@
+---
+- name: Perform app config backup
+  hosts: app_machine
+  gather_facts: false
+  roles:
+    - app_backup

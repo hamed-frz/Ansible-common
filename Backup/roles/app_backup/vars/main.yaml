@@ -1,0 +1,7 @@
+---
+app_folder: "/myapp"
+backup_file_name: "config_app_backup"
+qnap_host: "192.168.1.2"
+qnap_user: "admin"
+qnap_backup_dir: "/backup/myapp/"
+qnap_ssh_port: 22

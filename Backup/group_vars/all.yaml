@@ -1,0 +1,2 @@
+---
+ansible_date_time: "{{ lookup('pipe', 'date +%Y%m%d_%H%M%S') }}"

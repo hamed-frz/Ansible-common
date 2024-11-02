@@ -1,0 +1,10 @@
+---
+pfsense_instances:
+- { pfsense_name: "pfsense1", pfsense_host: "192.168.1.1", pfsense_port: "443", pfsense_user: "admin", pfsense_password: "password1" }
+
+backup_dir: "backup_pfsense"
+backup_file_name: "config_pf_backup"
+qnap_host: "192.168.1.2"
+qnap_user: "admin"
+qnap_backup_dir: "/backup/pf_master/"
+qnap_ssh_port: 22

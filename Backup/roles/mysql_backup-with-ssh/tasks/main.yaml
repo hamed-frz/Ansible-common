@@ -1,0 +1,80 @@
+
+- name: Create a backup directory (on mysql host)
+  ansible.builtin.file:
+    path: "{{ db_directory_backup }}"
+    state: directory
+    mode: '0755'
+  delegate_to: mysql_machine
+
+
+- name: Backup MySQL database from remote server
+  shell: |
+    mysqldump -u {{ mysql_user }} -p{{ mysql_password }} --all-databases > {{ db_directory_backup }}/mysql_backup.sql
+  delegate_to: mysql_machine
+
+
+- name: Compress the backups
+  ansible.builtin.archive:
+    path: "{{ db_directory_backup }}/mysql_backup.sql"
+    dest: "{{ db_directory_backup }}/mysql_backup.sql.tar.gz"
+    format: gz
+  delegate_to: mysql_machine
+
+
+# - name: Create a backup directory (on ansible host)
+#   ansible.builtin.file:
+#     path: /tmp/backup
+#     state: directory
+#     mode: '0755'
+#   delegate_to: localhost
+
+
+- name: Copy the mysql backup from mysql machine to QNAP
+  ansible.builtin.fetch:
+    src: "{{ db_directory_backup }}/mysql_backup.sql.tar.gz"
+    dest: "{{ qnap_backup_dir }}/mysql_backup.sql_{{ ansible_date_time }}.tar.gz"
+    flat: yes
+  delegate_to: mysql_machine
+  #ignore_errors: yes
+
+
+- name: Transfer backup to QNAP via SCP
+  ansible.builtin.copy:
+    src: "/backup/mysql/all_databases_backup_{{ ansible_date_time.date }}.tar.gz"
+    dest: "/mnt/qnap_backups/mysql_slave/"
+    remote_src: no
+    mode: '0644'
+  delegate_to: localhost
+
+- name: Clean up old backups on Mysql machine
+  ansible.builtin.find:
+    paths: "{{ db_directory_backup }}"
+    age: 1d
+    recurse: yes
+  register: old_backups
+  delegate_to: mysql_machine
+
+
+- name: Remove old backups
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ old_backups.files }}"
+  delegate_to: mysql_machine
+
+
+- name: Clean up old backups on Ansible host
+  ansible.builtin.find:
+    paths: "{{ qnap_backup_dir }}"
+    age: 7d
+    recurse: yes
+  register: old_backups
+  delegate_to: localhost
+
+
+- name: Remove old backups
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ old_backups.files }}"
+  delegate_to: localhost

@@ -1,0 +1,27 @@
+---
+- name: Zip the config folder on APP machine
+  shell: |
+    zip -r /tmp/{{ backup_file_name }}.zip {{ app_folder }}
+  delegate_to: app_machine
+  #ignore_errors: yes
+
+
+- name: Copy the app backup from APP machine to Ansible control machine
+  ansible.builtin.fetch:
+    src: /tmp/{{ backup_file_name }}.zip
+    dest: /tmp/
+    flat: yes
+  delegate_to: app_machine
+  #ignore_errors: yes
+
+- name: Transfer the app backup from Ansible control machine to QNAP
+  shell: |
+    rsync -avz -e "ssh -p {{ qnap_ssh_port }}" \
+    /tmp/{{ backup_file_name }}.zip \
+    {{ qnap_user }}@{{ qnap_host }}:{{ qnap_backup_dir }}/{{ backup_file_name }}_{{ ansible_date_time }}.zip
+  delegate_to: localhost
+  #ignore_errors: yes
+
+- name: Report app config folder backup success
+  debug:
+    msg: "App config folder backup and transfer to QNAP completed successfully."

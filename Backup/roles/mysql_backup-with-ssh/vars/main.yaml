@@ -1,0 +1,6 @@
+---
+mysql_host: "192.168.2.2"
+mysql_user: "mysql_user"
+mysql_password: "mysql_password"
+db_directory_backup: "/home/backup_user/devops-backup"
+qnap_backup_dir: "/mnt/qnap_backups/mysql_master/"
